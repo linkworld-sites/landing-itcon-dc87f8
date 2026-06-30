@@ -1,7 +1,6 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useReducedMotion, MotionValue } from "framer-motion";
+import { motion } from "framer-motion";
 
 const FRAMES = [
   {
@@ -27,156 +26,53 @@ const FRAMES = [
   },
 ];
 
-const TOTAL = FRAMES.length;
-// Crossfade half-window as a fraction of total scroll progress.
-// Each frame transition takes CROSS * 2 of the 0–1 range.
-const CROSS = 0.04;
-
-function getInputRange(index: number): number[] {
-  const seg = 1 / TOTAL;
-  if (index === 0) {
-    return [0, seg - CROSS, seg + CROSS];
-  } else if (index === TOTAL - 1) {
-    const boundary = index * seg;
-    return [boundary - CROSS, boundary + CROSS, 1];
-  } else {
-    const inBoundary = index * seg;
-    const outBoundary = (index + 1) * seg;
-    return [inBoundary - CROSS, inBoundary + CROSS, outBoundary - CROSS, outBoundary + CROSS];
-  }
-}
-
-function getOpacityOutput(index: number): number[] {
-  if (index === 0) return [1, 1, 0];
-  if (index === TOTAL - 1) return [0, 1, 1];
-  return [0, 1, 1, 0];
-}
-
-function getYOutput(index: number): number[] {
-  if (index === 0) return [0, 0, -12];
-  if (index === TOTAL - 1) return [12, 0, 0];
-  return [12, 0, 0, -12];
-}
-
-function ProgressDot({
-  scrollYProgress,
-  index,
-}: {
-  scrollYProgress: MotionValue<number>;
-  index: number;
-}) {
-  const seg = 1 / TOTAL;
-  const center = index * seg + seg / 2;
-  const opacity = useTransform(
-    scrollYProgress,
-    [Math.max(0, center - seg / 2), center, Math.min(1, center + seg / 2)],
-    [0.3, 1, 0.3]
-  );
-  return <motion.div style={{ opacity }} className="h-1.5 w-1.5 rounded-full bg-teal" />;
-}
-
-function Frame({
-  frame,
-  scrollYProgress,
-  index,
-}: {
-  frame: (typeof FRAMES)[0];
-  scrollYProgress: MotionValue<number>;
-  index: number;
-}) {
-  const inputRange = getInputRange(index);
-  const opacity = useTransform(scrollYProgress, inputRange, getOpacityOutput(index));
-  const y = useTransform(scrollYProgress, inputRange, getYOutput(index));
-
-  return (
-    <motion.div
-      style={{ opacity, y }}
-      className="absolute inset-0 flex items-center px-12 lg:px-24"
-    >
-      <div className="max-w-4xl">
-        <span className="font-mono text-sm tracking-widest text-teal">{frame.tag}</span>
-        <h2
-          className="mt-6 font-display font-bold leading-none tracking-tight text-chalk whitespace-pre-line"
-          style={{ fontSize: "clamp(2.5rem, 6vw, 6.5rem)" }}
-        >
-          {frame.claim}
-        </h2>
-        <div className="mt-10 flex flex-wrap items-end gap-5">
-          <span
-            className="font-mono font-medium text-primary leading-none"
-            style={{ fontSize: "clamp(3rem, 7vw, 7rem)" }}
-          >
-            {frame.stat}
-          </span>
-          <span className="mb-3 max-w-xs font-body text-sm text-muted leading-snug">
-            {frame.statLabel}
-          </span>
-        </div>
-        <p className="mt-8 max-w-2xl font-body text-lg leading-relaxed text-muted">
-          {frame.body}
-        </p>
-      </div>
-    </motion.div>
-  );
-}
-
+// Differentiators — normal document flow, NO pinned/scrubbed scroll. Each frame
+// reveals once with a soft fade + rise when it enters the viewport, then holds
+// fully readable. (The previous pinned 300vh version left a large empty scroll
+// area and translated the reading copy mid-scroll — both fixed here.)
 export default function Differentiators() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
-
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"],
-  });
-
-  if (reduce) {
-    return (
-      <section className="bg-stage py-28 px-6 lg:px-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-10 flex items-center gap-3">
-            <span className="h-px w-10 bg-teal" />
-            <span className="font-mono text-xs tracking-widest text-teal">/WARUM ITCON</span>
-          </div>
-          <div className="grid gap-16 lg:grid-cols-3">
-            {FRAMES.map((frame) => (
-              <div key={frame.tag}>
-                <span className="font-mono text-sm text-teal">{frame.tag}</span>
-                <h2
-                  className="mt-4 font-display font-bold text-chalk leading-tight whitespace-pre-line"
-                  style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)" }}
-                >
-                  {frame.claim}
-                </h2>
-                <p className="mt-4 font-body text-muted leading-relaxed text-sm">{frame.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    // h-[300vh] gives the pin its scroll travel: 300vh container − 100vh sticky = 200vh of pinned scrolling
-    <section ref={containerRef} className="relative h-[300vh]">
-      <div className="sticky top-0 h-screen overflow-hidden bg-stage">
-        {/* Section label */}
-        <div className="absolute top-8 left-8 z-10 flex items-center gap-3">
-          <span className="h-px w-8 bg-teal" />
+    <section className="bg-stage py-28 px-6 lg:px-16">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-16 flex items-center gap-3">
+          <span className="h-px w-10 bg-teal" />
           <span className="font-mono text-xs tracking-widest text-teal">/WARUM ITCON</span>
         </div>
 
-        {/* Progress dots */}
-        <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 flex flex-col gap-3">
-          {FRAMES.map((_, i) => (
-            <ProgressDot key={i} scrollYProgress={scrollYProgress} index={i} />
-          ))}
-        </div>
-
-        {/* Frames cross-fade in place — no horizontal translation */}
-        <div className="relative h-full">
-          {FRAMES.map((frame, i) => (
-            <Frame key={i} frame={frame} scrollYProgress={scrollYProgress} index={i} />
+        <div className="space-y-24 lg:space-y-32">
+          {FRAMES.map((frame) => (
+            <motion.div
+              key={frame.tag}
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-12%" }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="grid gap-10 lg:grid-cols-[1fr_auto] lg:items-end"
+            >
+              <div className="max-w-3xl">
+                <span className="font-mono text-sm tracking-widest text-teal">{frame.tag}</span>
+                <h2
+                  className="mt-5 font-display font-bold leading-none tracking-tight text-chalk whitespace-pre-line"
+                  style={{ fontSize: "clamp(2rem, 5vw, 4.5rem)" }}
+                >
+                  {frame.claim}
+                </h2>
+                <p className="mt-7 max-w-2xl font-body text-lg leading-relaxed text-muted">
+                  {frame.body}
+                </p>
+              </div>
+              <div className="flex items-end gap-4 lg:flex-col lg:items-end lg:text-right">
+                <span
+                  className="font-mono font-medium text-primary leading-none"
+                  style={{ fontSize: "clamp(2.5rem, 5vw, 5rem)" }}
+                >
+                  {frame.stat}
+                </span>
+                <span className="mb-2 max-w-[14rem] font-body text-sm text-muted leading-snug">
+                  {frame.statLabel}
+                </span>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
